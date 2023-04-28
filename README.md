@@ -23,8 +23,7 @@ optional arguments:
   
   -beta BETA            set the beta weighting for KL divergence
   
-  -random_height_dim RANDOM_HEIGHT_DIM set to 1 for random height and dimension generation, 0 to set an assigned target size and variable positions in   
-                                       nominal_position.mat, 2 for assigned target size, and relative position (x,y) to the transmitter (distance 4m)
+  -random_height_dim RANDOM_HEIGHT_DIM set to 1 for random height and dimension generation, 0 to set an assigned target size and variable positions in nominal_position.mat, 2 for assigned target size, and relative position (x,y) to the transmitter (distance 4m)
   
   -height HEIGHT        set the target height in m
   
