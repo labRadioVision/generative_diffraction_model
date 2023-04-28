@@ -1,6 +1,8 @@
 # generative_diffraction_model
- the code can be used to generate RF attenuation samples according to a diffraction model using a pre-trained C-VAE network. 
- 
+the code can be used to generate RF attenuation samples according to a diffraction model using a pre-trained C-VAE network. 
+
+see paper: https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=9538985
+
 Pre-trained models limitations: transmitter-receiver distance (4m) and height from ground 1m, 2.40GHz, maximum and minimum target height (2m and 1.7m), maximum and minimum target trasversal max size (0.55m) and 0.45m. 75 nominal positions used in training (see nominal_positions.mat)
 
 Pre-trained models are ordered by latent dimensions and beta
@@ -23,7 +25,7 @@ optional arguments:
   
   -beta BETA            set the beta weighting for KL divergence
   
-  -random_height_dim RANDOM_HEIGHT_DIM set to 1 for random height and dimension generation, 0 to set an assigned target size and variable positions in nominal_position.mat, 2 for assigned target size, and relative position (x,y) to the transmitter (distance 4m)
+  -random_height_dim RANDOM_HEIGHT_DIM set to 0 to generate attenuations for random target height (H2<height<H1), dimension (T2<tm<T1) and variable positions in nominal_positions.mat, 1 to set an assigned target size (height, tm) and variable positions in nominal_position.mat, 2 for assigned target size (height, tm), and relative position (x,y) to the transmitter (distance 4m)
   
   -height HEIGHT        set the target height in m
   
