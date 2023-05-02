@@ -31,7 +31,7 @@ parser.add_argument("-H1", default=2.0, help="set the MAX target height", type=f
 parser.add_argument("-T1", default=0.55, help="set the MAX target trasversal max size ", type=float)
 parser.add_argument("-H2", default=1.7, help="set the MIN target height", type=float)
 parser.add_argument("-T2", default=0.45, help="set the MIN target trasversal max size ", type=float)
-parser.add_argument("-pos_x", default=0.5, help="set the target position in x domain (along the los)", type=float)
+parser.add_argument("-pos_x", default=1.0, help="set the target position in x domain (along the los)", type=float)
 parser.add_argument("-pos_y", default=0.0, help="set the target position in y domain (across the los)", type=float)
 args = parser.parse_args()
 
