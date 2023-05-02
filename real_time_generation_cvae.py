@@ -2,8 +2,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.datasets import mnist
-from conditional_vae_with_diffraction import Conditional_VAE
-from utils_diffraction_model import generate_conditioned_attenuations_full, generate_conditioned_attenuation_sample, generate_conditioned_attenuation_sample_random
+from conditional_vae_with_diffraction_decoder import Conditional_VAE
+from utils_diffraction_model import generate_conditioned_attenuation_sample_binlabels, generate_conditioned_attenuation_sample_random_binlabels
 from keras.layers import Lambda, Input, Dense
 from keras.models import Model
 # from tensorflow.keras.datasets import mnist
@@ -24,7 +24,7 @@ warnings.filterwarnings("ignore")
 parser = argparse.ArgumentParser()
 parser.add_argument("-latent_dim", default=16, help="set the number of latent dimensions for reconstruction", type=int)
 parser.add_argument("-beta", default=0.05, help="set the beta weighting for KL divergence", type=float)
-parser.add_argument("-random_height_dim", default=2, help="set to 1 for random height and dimension generation, 0 for assigned target size, but variable positions in a grid, 2 for assigned target size, and position", type=int)
+parser.add_argument("-random_height_dim", default=2, help="set to 0 for random height and dimension generation, 1 to set an assigned target size and variable positions in nominal_position.mat, 2 for assigned target size, and position", type=int)
 parser.add_argument("-height", default=1.9, help="set the target height", type=float)
 parser.add_argument("-tm", default=0.54, help="set the target trasversal max size ", type=float)
 parser.add_argument("-H1", default=2.0, help="set the MAX target height", type=float)
@@ -43,11 +43,18 @@ num_channels = 1
 # 2) 200cm height, 45 trasversal size
 # 3) 170cm height, 55 trasversal size
 # 4) 170cm height, 45 trasversal size
-num_positions = 75
+filename2 = 'nominal_positions.mat'
+matfile = sio.loadmat(file_name=filename2)
+nominal_positions = np.asarray(matfile['nominal_positions'])
+num_positions = nominal_positions.shape[0]
 num_dim = 2
 num_heights = 2
 num_dimensions = num_dim * num_heights
-num_labels = num_positions + num_dim + num_heights
+filename2 = 'nominal_target_size.mat'
+matfile = sio.loadmat(file_name=filename2)
+nominal_target_size = np.asarray(matfile['nominal_target_size'])
+num_labels_dim = nominal_target_size.shape[0]
+num_labels = num_positions + num_labels_dim
 num_classes = num_positions * num_dim * num_heights # total number of cases generated
 latent_dim = args.latent_dim
 beta = args.beta
@@ -57,34 +64,33 @@ epochs = 500
 rotation_points = 101
 
 rotations = np.linspace(-math.pi / 2, 0, rotation_points)
-checkpoint_path = "training_cvae_EM_{}_{}_heights_2_dimensions2_soft_labels/cvae.ckpt".format(latent_dim, beta)
-
+checkpoint_path = "training_cvae_EM_{}_{}_heights_2_dimensions2_bin_labels/cvae.ckpt".format(latent_dim, beta)
+print(checkpoint_path)
 if __name__ == '__main__':
 
     model = Conditional_VAE(latent_dim, num_labels, rotation_points)
     # filename = 'EM_norm_parameters_{}.mat'.format(num_classes)
     filename = 'EM_norm_parameters_{}_numheights_{}_numdim_{}.mat'.format(num_classes, num_heights, num_dim)
+    print(filename)
     matfile = sio.loadmat(file_name=filename)
     dataset_max = float(matfile['RSS_max'])
     dataset_mean = float(matfile['RSS_mean'])
     dataset_std = float(matfile['RSS_std'])
     model.load_weights(checkpoint_path)
     deviation = 0.12
-    step_distance = 0.2
-    filename2 = 'nominal_positions.mat'
-    matfile = sio.loadmat(file_name=filename2)
-    nominal_positions = np.asarray(matfile['nominal_positions'])
+    step_distance = 0.2 # for positions
+    step_distance2 = 0.04 # for target di
 
 
     if random_height_dim == 1:
         ########### generate positions with an assigned target dimension
         generation = 250
-        att_responses = np.zeros((201, generation, num_positions))
+        att_responses = np.zeros((201, generation, num_positions)) # generated attenuations (rotations, number of generations, num positions)
         height = args.height
         tm = args.tm
         for pos in range(num_positions):
             position = [nominal_positions[pos,0],nominal_positions[pos,1]]
-            att_responses[:, :, pos] = generate_conditioned_attenuation_sample(model, dataset_max, dataset_mean, dataset_std, rotation_points, rotations, num_labels, num_dimensions, height, tm, nominal_positions, position, deviation, step_distance, generation)
+            att_responses[:, :, pos] = generate_conditioned_attenuation_sample_binlabels(model, dataset_max, dataset_mean, dataset_std, rotation_points, rotations, num_labels, num_dimensions, height, tm, nominal_positions, position, deviation, step_distance, step_distance2, generation)
 
         dict_1 = {"generated_interpolated_attenuations": att_responses, "rotations": rotations,
                   "generation": generation,
@@ -92,47 +98,47 @@ if __name__ == '__main__':
                   "deviation": deviation, "step_distance": step_distance}
 
         sio.savemat(
-            "results/generated_samples_cvae_latent_vars_{}_beta_{}_height_{}_targetdim_{}.mat".format(latent_dim, beta,
+            "results/generated_samples_cvae_latent_vars_{}_beta_{}_height_{}_targetdim_{}_binlabels.mat".format(latent_dim, beta,
                                                                                                       height, tm), dict_1)
     elif random_height_dim == 2:
         ########### generate positions with an assigned target dimension and position
         generation = 250
-        att_responses = np.zeros((201, generation, 1))
+        att_responses = np.zeros((201, generation, 1)) # generated attenuations (rotations, number of generations)
         height = args.height
         tm = args.tm
         position = [args.pos_x, args.pos_y]
         deviation = 0 # disable position deviation around nominal location
-        att_responses[:, :, 0] = generate_conditioned_attenuation_sample(model, dataset_max, dataset_mean,
+        att_responses[:, :, 0] = generate_conditioned_attenuation_sample_binlabels(model, dataset_max, dataset_mean,
                                                                            dataset_std, rotation_points, rotations,
                                                                            num_labels, num_dimensions, height, tm,
                                                                            nominal_positions, position, deviation,
-                                                                           step_distance, generation)
+                                                                           step_distance, step_distance2, generation)
         dict_1 = {"generated_interpolated_attenuations": att_responses, "rotations": rotations,
                   "generation": generation,
                   "height": height, "trasversal_size": tm, "nominal_positions": nominal_positions,
                   "deviation": deviation, "step_distance": step_distance, "position": position}
 
         sio.savemat(
-            "results/generated_samples_cvae_latent_vars_{}_beta_{}_height_{}_targetdim_{}_position{}.mat".format(latent_dim, beta,
+            "results/generated_samples_cvae_latent_vars_{}_beta_{}_height_{}_targetdim_{}_position{}_binlabels.mat".format(latent_dim, beta,
                                                                                                       height, tm, position), dict_1)
 
     elif random_height_dim == 0:
         # generate all positions for variable target dimensions but limited to min and max values
         generation = 250 * 4
-        att_responses = np.zeros((201, generation, num_positions))
+        att_responses = np.zeros((201, generation, num_positions)) # generated attenuations (rotations, number of generations, num positions), for each generation target size is uniformly distributed
         H1 = args.H1
         H2 = args.H2
         T1 = args.T1
         T2 = args.T2
         for pos in range(num_positions):
-            att_responses[:, :, pos] = generate_conditioned_attenuation_sample_random(model, dataset_max, dataset_mean, dataset_std, rotation_points, rotations, num_labels, num_dimensions, nominal_positions, pos, deviation, step_distance, T1, T2, H1, H2, generation)
+            att_responses[:, :, pos] = generate_conditioned_attenuation_sample_random_binlabels(model, dataset_max, dataset_mean, dataset_std, rotation_points, rotations, num_labels, num_dimensions, nominal_positions, pos, deviation, step_distance, step_distance2, T1, T2, H1, H2, generation)
         dict_1 = {"generated_interpolated_attenuations": att_responses, "rotations": rotations,
                   "generation": generation,
                   "height_max": H1, "trasversal_size_max": T1, "height_min": H2, "trasversal_size_min": T2, "nominal_positions": nominal_positions,
                   "deviation": deviation, "step_distance": step_distance}
 
         sio.savemat(
-            "results/generated_samples_cvae_latent_vars_{}_beta_{}_random_heightMAX-MIN_{}-{}_targetdimMAX-MIN_{}-{}.mat".format(latent_dim, beta,
+            "results/generated_samples_cvae_latent_vars_{}_beta_{}_random_heightMAX-MIN_{}-{}_targetdimMAX-MIN_{}-{}_binlabels.mat".format(latent_dim, beta,
                                                                                                       H1,H2,T1,T2), dict_1)
 
     # loaded_model = tf.keras.models.load_model('cond_vae_RSS_model')

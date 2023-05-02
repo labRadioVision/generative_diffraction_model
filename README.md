@@ -9,7 +9,7 @@ Pre-trained models are ordered by latent dimensions and beta
 
 Usage:
 
-real_time_generation_cvae_soft_labels.py [-h]   [-latent_dim LATENT_DIM]
+real_time_generation_cvae.py [-h]   [-latent_dim LATENT_DIM]
                                                 [-beta BETA]
                                                 [-random_height_dim RANDOM_HEIGHT_DIM]
                                                 [-height HEIGHT] [-tm TM]
