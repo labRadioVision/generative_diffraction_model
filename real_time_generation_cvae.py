@@ -70,7 +70,7 @@ if __name__ == '__main__':
 
     model = Conditional_VAE(latent_dim, num_labels, rotation_points)
     # filename = 'EM_norm_parameters_{}.mat'.format(num_classes)
-    filename = 'EM_norm_parameters_{}_numheights_{}_numdim_{}.mat'.format(num_classes, num_heights, num_dim)
+    filename = 'EM_norm_parameters_{}_numtargets_{}.mat'.format(num_classes, num_labels_dim)
     print(filename)
     matfile = sio.loadmat(file_name=filename)
     dataset_max = float(matfile['RSS_max'])

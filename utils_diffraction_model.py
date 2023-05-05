@@ -7,7 +7,7 @@ import time
 import math
 warnings.filterwarnings("ignore")
 
-########### COMBINATIONS IN TRAINING #####
+########### COMBINATIONS IN TRAINING: do not change #####
 # 1) 2m height, 55cm trasversal size
 # 2) 2m height, 45 trasversal size
 # 3) 1.7 height, 55 trasversal size
