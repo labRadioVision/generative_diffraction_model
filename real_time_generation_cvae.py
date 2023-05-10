@@ -22,17 +22,19 @@ import warnings
 # not working, generating all samples to 0
 warnings.filterwarnings("ignore")
 parser = argparse.ArgumentParser()
-parser.add_argument("-latent_dim", default=16, help="set the number of latent dimensions for reconstruction", type=int) # supported values (pre-trained) 16, 32
-parser.add_argument("-beta", default=0.05, help="set the beta weighting for KL divergence", type=float) # supported values (pre trained) 1e-09, 0.05 and 1
-parser.add_argument("-random_height_dim", default=2, help="set to 0 for random height and dimension generation, 1 to set an assigned target size and variable positions in nominal_position.mat, 2 for assigned target size, and position", type=int)
-parser.add_argument("-height", default=1.9, help="set the target height", type=float)
-parser.add_argument("-tm", default=0.54, help="set the target trasversal max size ", type=float)
+parser.add_argument("-latent_dim", default=32, help="set the number of latent dimensions for reconstruction", type=int) # supported values (pre-trained) 16, 32
+parser.add_argument("-beta", default=1e-09, help="set the beta weighting for KL divergence", type=float) # supported values (pre trained) 1e-09, 0.05 and 1
+parser.add_argument("-random_height_dim", default=1, help="set to 0 for random height and dimension generation, 1 to set an assigned target size and variable positions in nominal_position.mat, 2 for assigned target size, and position", type=int)
+parser.add_argument("-height", default=1.65, help="set the target height", type=float)
+parser.add_argument("-tm", default=0.65, help="set the target trasversal max size ", type=float)
 parser.add_argument("-H1", default=2.0, help="set the MAX target height", type=float)
-parser.add_argument("-T1", default=0.55, help="set the MAX target trasversal max size ", type=float)
-parser.add_argument("-H2", default=1.7, help="set the MIN target height", type=float)
-parser.add_argument("-T2", default=0.45, help="set the MIN target trasversal max size ", type=float)
+parser.add_argument("-T1", default=0.65, help="set the MAX target trasversal max size ", type=float)
+parser.add_argument("-H2", default=1.4, help="set the MIN target height", type=float)
+parser.add_argument("-T2", default=0.35, help="set the MIN target trasversal max size ", type=float)
 parser.add_argument("-pos_x", default=1.0, help="set the target position in x domain (along the los)", type=float)
 parser.add_argument("-pos_y", default=0.0, help="set the target position in y domain (across the los)", type=float)
+parser.add_argument("-positions", default="nominal_positions.mat", help="set the nominal positions filename", type=str)
+parser.add_argument("-targets", default="nominal_target_size_32.mat", help="set the nominal positions filename", type=str)
 args = parser.parse_args()
 
 random_height_dim = args.random_height_dim
@@ -43,14 +45,16 @@ num_channels = 1
 # 2) 200cm height, 45 trasversal size
 # 3) 170cm height, 55 trasversal size
 # 4) 170cm height, 45 trasversal size
-filename2 = 'nominal_positions.mat'
+# filename2 = 'nominal_positions.mat'
+filename2 = args.positions
 matfile = sio.loadmat(file_name=filename2)
 nominal_positions = np.asarray(matfile['nominal_positions'])
 num_positions = nominal_positions.shape[0]
 num_dim = 2
 num_heights = 2
 num_dimensions = num_dim * num_heights
-filename2 = 'nominal_target_size.mat'
+# filename2 = 'nominal_target_size.mat'
+filename2 = args.targets
 matfile = sio.loadmat(file_name=filename2)
 nominal_target_size = np.asarray(matfile['nominal_target_size'])
 num_labels_dim = nominal_target_size.shape[0]
@@ -64,13 +68,13 @@ epochs = 500
 rotation_points = 101
 
 rotations = np.linspace(-math.pi / 2, 0, rotation_points)
-checkpoint_path = "training_cvae_EM_{}_{}_heights_2_dimensions2_bin_labels/cvae.ckpt".format(latent_dim, beta)
+checkpoint_path = "training_cvae_EM_{}_{}_bin_labels_num_{}/cvae.ckpt".format(latent_dim, beta, num_labels)
 print(checkpoint_path)
 if __name__ == '__main__':
 
     model = Conditional_VAE(latent_dim, num_labels, rotation_points)
     # filename = 'EM_norm_parameters_{}.mat'.format(num_classes)
-    filename = 'EM_norm_parameters_{}_numtargets_{}.mat'.format(num_classes, num_labels_dim)
+    filename = 'EM_norm_parameters_{}_numlabels_{}.mat'.format(num_classes, num_labels)
     print(filename)
     matfile = sio.loadmat(file_name=filename)
     dataset_max = float(matfile['RSS_max'])
@@ -90,7 +94,7 @@ if __name__ == '__main__':
         tm = args.tm
         for pos in range(num_positions):
             position = [nominal_positions[pos,0],nominal_positions[pos,1]]
-            att_responses[:, :, pos] = generate_conditioned_attenuation_sample_binlabels(model, dataset_max, dataset_mean, dataset_std, rotation_points, rotations, num_labels, num_dimensions, height, tm, nominal_positions, position, deviation, step_distance, step_distance2, generation)
+            att_responses[:, :, pos] = generate_conditioned_attenuation_sample_binlabels(args,model, dataset_max, dataset_mean, dataset_std, rotation_points, rotations, num_labels, num_dimensions, height, tm, nominal_positions, position, deviation, step_distance, step_distance2, generation)
 
         dict_1 = {"generated_interpolated_attenuations": att_responses, "rotations": rotations,
                   "generation": generation,
@@ -108,7 +112,7 @@ if __name__ == '__main__':
         tm = args.tm
         position = [args.pos_x, args.pos_y]
         deviation = 0 # disable position deviation around nominal location
-        att_responses[:, :, 0] = generate_conditioned_attenuation_sample_binlabels(model, dataset_max, dataset_mean,
+        att_responses[:, :, 0] = generate_conditioned_attenuation_sample_binlabels(args,model, dataset_max, dataset_mean,
                                                                            dataset_std, rotation_points, rotations,
                                                                            num_labels, num_dimensions, height, tm,
                                                                            nominal_positions, position, deviation,
@@ -131,7 +135,7 @@ if __name__ == '__main__':
         T1 = args.T1
         T2 = args.T2
         for pos in range(num_positions):
-            att_responses[:, :, pos] = generate_conditioned_attenuation_sample_random_binlabels(model, dataset_max, dataset_mean, dataset_std, rotation_points, rotations, num_labels, num_dimensions, nominal_positions, pos, deviation, step_distance, step_distance2, T1, T2, H1, H2, generation)
+            att_responses[:, :, pos] = generate_conditioned_attenuation_sample_random_binlabels(args,model, dataset_max, dataset_mean, dataset_std, rotation_points, rotations, num_labels, num_dimensions, nominal_positions, pos, deviation, step_distance, step_distance2, T1, T2, H1, H2, generation)
         dict_1 = {"generated_interpolated_attenuations": att_responses, "rotations": rotations,
                   "generation": generation,
                   "height_max": H1, "trasversal_size_max": T1, "height_min": H2, "trasversal_size_min": T2, "nominal_positions": nominal_positions,

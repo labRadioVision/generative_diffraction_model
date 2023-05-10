@@ -7,7 +7,7 @@ import time
 import math
 warnings.filterwarnings("ignore")
 
-########### COMBINATIONS IN TRAINING: do not change #####
+########### COMBINATIONS IN TRAINING #####
 # 1) 2m height, 55cm trasversal size
 # 2) 2m height, 45 trasversal size
 # 3) 1.7 height, 55 trasversal size
@@ -16,9 +16,7 @@ H1 = 2.0
 H2 = 1.7
 T1 = 0.55
 T2 = 0.45
-filename2 = 'nominal_target_size.mat'
-matfile = sio.loadmat(file_name=filename2)
-nominal_target_size = np.asarray(matfile['nominal_target_size'])
+
 
 def assignLabelsPositions(position_c, nominal_positions, num_labels, step_distance):
     label_onehot = np.zeros((1, num_labels))
@@ -36,7 +34,7 @@ def assignLabelsPositions(position_c, nominal_positions, num_labels, step_distan
         print("position outside the training area")
     return label_onehot
 
-def assignLabelsPositions_v2(position_c, nominal_positions, num_labels, step_distance):
+def assignLabelsPositions_v2(position_c, nominal_positions, num_labels, step_distance): # partial one hot encoding
     label_onehot = np.zeros((1, num_labels))
     distance = np.zeros(nominal_positions.shape[0])
     for k in range(nominal_positions.shape[0]):
@@ -52,7 +50,7 @@ def assignLabelsPositions_v2(position_c, nominal_positions, num_labels, step_dis
         print("position outside the training area")
     return label_onehot
 
-def assignLabelsPositions_v3(position_c, nominal_positions, num_labels):
+def assignLabelsPositions_v3(position_c, nominal_positions, num_labels): # full one hot encoding
     label_onehot = np.zeros((1, num_labels))
     distance = np.zeros(nominal_positions.shape[0])
     for k in range(nominal_positions.shape[0]):
@@ -73,7 +71,8 @@ def assignLabelsTargeSize(height, tm):
         label_v = [1.0, 0.0, 0.0, 0.0]
     return label_v
 
-def assignLabelsTargeSize_v2(height, tm, step_distance2):
+def assignLabelsTargeSize_v2(height, tm, step_distance2, nominal_target_size): # partial one hot encoding
+
     siz = nominal_target_size.shape[0]
     label_v = np.zeros((1, siz))
     distance = np.zeros(siz)
@@ -91,7 +90,7 @@ def assignLabelsTargeSize_v2(height, tm, step_distance2):
         print("target size outside the training area")
     return label_v
 
-def assignLabelsTargeSize_v3(height, tm):
+def assignLabelsTargeSize_v3(height, tm, nominal_target_size): # full one hot encoding
     siz = nominal_target_size.shape[0]
     label_v = np.zeros((1, siz))
     distance = np.zeros(siz)
@@ -103,7 +102,10 @@ def assignLabelsTargeSize_v3(height, tm):
     return label_v
 
 
-def generate_conditioned_attenuation_sample_random_binlabels(model,dataset_max,dataset_mean, dataset_std, rotation_points, rotations, num_labels, num_dimensions, nominal_positions, pos, deviation, step_distance, step_distance2, T1_input, T2_input, H1_input, H2_input, generation):
+def generate_conditioned_attenuation_sample_random_binlabels(args,model,dataset_max,dataset_mean, dataset_std, rotation_points, rotations, num_labels, num_dimensions, nominal_positions, pos, deviation, step_distance, step_distance2, T1_input, T2_input, H1_input, H2_input, generation):
+    filename2 = args.targets
+    matfile = sio.loadmat(file_name=filename2)
+    nominal_target_size = np.asarray(matfile['nominal_target_size'])
     n = generation  # number of generation per input
     # deviation = 0.12
     # step_distance = 0.2
@@ -125,14 +127,14 @@ def generate_conditioned_attenuation_sample_random_binlabels(model,dataset_max,d
         deviationY = np.random.rand() * (deviation * 2) - deviation
         position_c = [nominal_positions[pos,0] + deviationX, nominal_positions[pos,1] + deviationY]
         # labelling, choose
-        label_onehot = assignLabelsPositions_v2(position_c, nominal_positions, num_labels, step_distance)
-        # label_onehot = assignLabelsPositions_v3(position_c, nominal_positions, num_labels)
+        # label_onehot = assignLabelsPositions_v2(position_c, nominal_positions, num_labels, step_distance)
+        label_onehot = assignLabelsPositions_v3(position_c, nominal_positions, num_labels)
         ##############
         height = (H1_input - H2_input) * np.random.rand() + H2_input
         tm = (T1_input - T2_input) * np.random.rand() + T2_input
         # labelling, choose
-        # label_v = assignLabelsTargeSize_v3(height, tm)
-        label_v = assignLabelsTargeSize_v2(height, tm, step_distance2)
+        label_v = assignLabelsTargeSize_v3(height, tm, nominal_target_size)
+        # label_v = assignLabelsTargeSize_v2(height, tm, step_distance2, nominal_target_size)
         #####################
         label_onehot[:, num_positions:] = label_v
         # for q in range(num_labels - num_positions):
@@ -189,7 +191,95 @@ def generate_conditioned_attenuation_sample_random(model,dataset_max,dataset_mea
         att_responses[:, gen_idx] = np.concatenate((g, g2[::-1]), axis=0)
     return att_responses
 
-def generate_conditioned_attenuation_sample_binlabels(model,dataset_max,dataset_mean, dataset_std, rotation_points, rotations, num_labels, num_dimensions, height, tm, nominal_positions, position, deviation, step_distance, step_distance2, generation):
+def generate_conditioned_attenuation_sample_binlabels_MIMO_test(args, model,dataset_max,dataset_mean, dataset_std, rotation_points, rotations, num_labels, nominal_positions, position, deviation, step_distance, step_distance2, generation):
+    # filename2 = args.targets
+    # matfile = sio.loadmat(file_name=filename2)
+    # nominal_target_size = np.asarray(matfile['nominal_target_size']) # redefine nominal target sizes
+    n = generation  # number of generation per input
+    num_positions = nominal_positions.shape[0]
+    antennas = 81
+    # deviation = 0.12
+    # step_distance = 0.2
+    # latent = model.encoder_block1.output[0].shape[1]
+    latent = model.latent_dim
+    rotations2 = rotations[:-1]
+    full_rotations = np.concatenate((rotations, rotations2[::-1]), axis=0)  # -pi/2 pi/2 support
+    att_responses = np.zeros((np.shape(full_rotations)[0], antennas, n))
+    # labelling, choose
+    # label_v = assignLabelsTargeSize_v3(height, tm, nominal_target_size)
+    # label_v = assignLabelsTargeSize_v2(height, tm, step_distance2, nominal_target_size)
+    # ######################
+
+    for gen_idx in range(n):
+        deviationX = np.random.rand() * (deviation * 2) - deviation # +- 0.1
+        deviationY = np.random.rand() * (deviation * 2) - deviation
+        position_c = [position[0] + deviationX, position[1] + deviationY]
+        # labelling, choose
+        label_onehot = assignLabelsPositions_v2(position_c, nominal_positions, num_labels, step_distance)
+        # label_onehot = assignLabelsPositions_v3(position_c, nominal_positions, num_labels)
+        ##################################
+        # label_onehot[:, num_positions:] = label_v
+        # for q in range(num_labels - num_positions):
+        #    label_onehot[:, num_positions + q] = label_v[:, q]
+        z = tf.random.normal(shape=(1, latent), mean=0.0, stddev=1.0)
+        z_lbl_concat = np.concatenate((z, label_onehot), axis=1)
+        preds = model.decoder_block(z_lbl_concat)
+
+        response = tf.reshape(preds[0], [-1, rotation_points, antennas])
+        response = (response * dataset_std) + dataset_mean
+        response = response * dataset_max
+        g = np.squeeze(response.numpy())
+        g2 = g[:-1,:]
+        att_responses[:, :, gen_idx] = np.concatenate((g, g2[::-1,:]), axis=0)
+    return att_responses
+
+
+def generate_conditioned_attenuation_sample_binlabels_MIMO(args, model,dataset_max,dataset_mean, dataset_std, rotation_points, rotations, num_labels, num_dimensions, height, tm, nominal_positions, position, deviation, step_distance, step_distance2, generation):
+    filename2 = args.targets
+    matfile = sio.loadmat(file_name=filename2)
+    nominal_target_size = np.asarray(matfile['nominal_target_size']) # redefine nominal target sizes
+    n = generation  # number of generation per input
+    num_positions = nominal_positions.shape[0]
+    antennas = 81
+    # deviation = 0.12
+    # step_distance = 0.2
+    # latent = model.encoder_block1.output[0].shape[1]
+    latent = model.latent_dim
+    rotations2 = rotations[:-1]
+    full_rotations = np.concatenate((rotations, rotations2[::-1]), axis=0)  # -pi/2 pi/2 support
+    att_responses = np.zeros((np.shape(full_rotations)[0], antennas, n))
+    # labelling, choose
+    label_v = assignLabelsTargeSize_v3(height, tm, nominal_target_size)
+    # label_v = assignLabelsTargeSize_v2(height, tm, step_distance2, nominal_target_size)
+    # ######################
+
+    for gen_idx in range(n):
+        deviationX = np.random.rand() * (deviation * 2) - deviation # +- 0.1
+        deviationY = np.random.rand() * (deviation * 2) - deviation
+        position_c = [position[0] + deviationX, position[1] + deviationY]
+        # labelling, choose
+        # label_onehot = assignLabelsPositions_v2(position_c, nominal_positions, num_labels, step_distance)
+        label_onehot = assignLabelsPositions_v3(position_c, nominal_positions, num_labels)
+        ##################################
+        label_onehot[:, num_positions:] = label_v
+        # for q in range(num_labels - num_positions):
+        #    label_onehot[:, num_positions + q] = label_v[:, q]
+        z = tf.random.normal(shape=(1, latent), mean=0.0, stddev=1.0)
+        z_lbl_concat = np.concatenate((z, label_onehot), axis=1)
+        preds = model.decoder_block(z_lbl_concat)
+
+        response = tf.reshape(preds[0], [-1, rotation_points, antennas])
+        response = (response * dataset_std) + dataset_mean
+        response = response * dataset_max
+        g = np.squeeze(response.numpy())
+        g2 = g[:-1,:]
+        att_responses[:, :, gen_idx] = np.concatenate((g, g2[::-1,:]), axis=0)
+    return att_responses
+
+def generate_conditioned_attenuation_sample_binlabels(args, model,dataset_max,dataset_mean, dataset_std, rotation_points, rotations, num_labels, num_dimensions, height, tm, nominal_positions, position, deviation, step_distance, step_distance2, generation):
+    filename2 = args.targets
+    matfile = sio.loadmat(file_name=filename2)
+    nominal_target_size = np.asarray(matfile['nominal_target_size'])
     n = generation  # number of generation per input
     num_positions = nominal_positions.shape[0]
     # deviation = 0.12
@@ -200,8 +290,8 @@ def generate_conditioned_attenuation_sample_binlabels(model,dataset_max,dataset_
     full_rotations = np.concatenate((rotations, rotations2[::-1]), axis=0)  # -pi/2 pi/2 support
     att_responses = np.zeros((np.shape(full_rotations)[0], n))
     # labelling, choose
-    # label_v = assignLabelsTargeSize_v3(height, tm)
-    label_v = assignLabelsTargeSize_v2(height, tm, step_distance2)
+    label_v = assignLabelsTargeSize_v3(height, tm, nominal_target_size)
+    # label_v = assignLabelsTargeSize_v2(height, tm, step_distance2, nominal_target_size)
     # ######################
 
     for gen_idx in range(n):
@@ -209,8 +299,8 @@ def generate_conditioned_attenuation_sample_binlabels(model,dataset_max,dataset_
         deviationY = np.random.rand() * (deviation * 2) - deviation
         position_c = [position[0] + deviationX, position[1] + deviationY]
         # labelling, choose
-        label_onehot = assignLabelsPositions_v2(position_c, nominal_positions, num_labels, step_distance)
-        # label_onehot = assignLabelsPositions_v3(position_c, nominal_positions, num_labels)
+        # label_onehot = assignLabelsPositions_v2(position_c, nominal_positions, num_labels, step_distance)
+        label_onehot = assignLabelsPositions_v3(position_c, nominal_positions, num_labels)
         ##################################
         label_onehot[:, num_positions:] = label_v
         # for q in range(num_labels - num_positions):
