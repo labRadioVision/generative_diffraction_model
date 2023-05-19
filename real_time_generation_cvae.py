@@ -22,11 +22,11 @@ import warnings
 # not working, generating all samples to 0
 warnings.filterwarnings("ignore")
 parser = argparse.ArgumentParser()
-parser.add_argument("-latent_dim", default=32, help="set the number of latent dimensions for reconstruction", type=int) # supported values (pre-trained) 16, 32
-parser.add_argument("-beta", default=1e-09, help="set the beta weighting for KL divergence", type=float) # supported values (pre trained) 1e-09, 0.05 and 1
+parser.add_argument("-latent_dim", default=16, help="set the number of latent dimensions for reconstruction", type=int) # supported values (pre-trained) 16, 32
+parser.add_argument("-beta", default=0.05, help="set the beta weighting for KL divergence", type=float) # supported values (pre trained) 1e-09, 0.05 and 1
 parser.add_argument("-random_height_dim", default=1, help="set to 0 for random height and dimension generation, 1 to set an assigned target size and variable positions in nominal_position.mat, 2 for assigned target size, and position", type=int)
-parser.add_argument("-height", default=1.65, help="set the target height", type=float)
-parser.add_argument("-tm", default=0.65, help="set the target trasversal max size ", type=float)
+parser.add_argument("-height", default=1.4, help="set the target height", type=float)
+parser.add_argument("-tm", default=0.35, help="set the target trasversal max size ", type=float)
 parser.add_argument("-H1", default=2.0, help="set the MAX target height", type=float)
 parser.add_argument("-T1", default=0.65, help="set the MAX target trasversal max size ", type=float)
 parser.add_argument("-H2", default=1.4, help="set the MIN target height", type=float)
