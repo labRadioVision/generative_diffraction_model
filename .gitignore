@@ -1,0 +1,5 @@
+
+training_cvae_EM_32_0.001_heights_1_dimensions1_bin_labels_MIMO/cvae.ckpt.data-00000-of-00001
+*.data-00000-of-00001
+results/generated_samples_cvae_latent_vars_16_beta_0.05_height_2.0_targetdim_0.55_binlabels_MIMO.mat
+results/generated_samples_cvae_latent_vars_16_beta_0.05_height_1.4_targetdim_0.35_binlabels.mat

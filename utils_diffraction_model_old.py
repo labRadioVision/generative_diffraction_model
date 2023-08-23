@@ -191,51 +191,6 @@ def generate_conditioned_attenuation_sample_random(model,dataset_max,dataset_mea
         att_responses[:, gen_idx] = np.concatenate((g, g2[::-1]), axis=0)
     return att_responses
 
-
-def generate_conditioned_attenuation_sample_binlabels_MIMO_IQ_test(args, model,dataset_max,dataset_mean, dataset_std, rotation_points, rotations, num_labels, nominal_positions, position, deviation, step_distance, step_distance2, generation):
-    # filename2 = args.targets
-    # matfile = sio.loadmat(file_name=filename2)
-    # nominal_target_size = np.asarray(matfile['nominal_target_size']) # redefine nominal target sizes
-    n = generation  # number of generation per input
-    num_positions = nominal_positions.shape[0]
-    antennas = 81
-    # deviation = 0.12
-    # step_distance = 0.2
-    # latent = model.encoder_block1.output[0].shape[1]
-    latent = model.latent_dim
-    rotations2 = rotations[:-1]
-    full_rotations = np.concatenate((rotations, rotations2[::-1]), axis=0)  # -pi/2 pi/2 support
-    csi_responses = np.zeros((np.shape(full_rotations)[0], antennas, 2, n))
-    position_vector = np.zeros((n, 2))
-    # labelling, choose
-    # label_v = assignLabelsTargeSize_v3(height, tm, nominal_target_size)
-    # label_v = assignLabelsTargeSize_v2(height, tm, step_distance2, nominal_target_size)
-    # ######################
-
-    for gen_idx in range(n):
-        deviationX = np.random.rand() * (deviation * 2) - deviation # +- 0.1
-        deviationY = np.random.rand() * (deviation * 2) - deviation
-        position_c = [position[0] + deviationX, position[1] + deviationY]
-        position_vector[gen_idx, :] = position_c
-        # labelling, choose
-        label_onehot = assignLabelsPositions_v2(position_c, nominal_positions, num_labels, step_distance)
-        #label_onehot = assignLabelsPositions_v3(position_c, nominal_positions, num_labels)
-        ##################################
-        # label_onehot[:, num_positions:] = label_v
-        # for q in range(num_labels - num_positions):
-        #    label_onehot[:, num_positions + q] = label_v[:, q]
-        z = tf.random.normal(shape=(1, latent), mean=0.0, stddev=1.0)
-        z_lbl_concat = np.concatenate((z, label_onehot), axis=1)
-        response = model.decoder_block(z_lbl_concat)
-        # response = preds
-        # response = tf.reshape(preds[0], [rotation_points, antennas])
-        response = (response * dataset_std) + dataset_mean
-        response = response * dataset_max
-        g = np.squeeze(response.numpy())
-        g2 = g[:-1, :, :]
-        csi_responses[:, :, :, gen_idx] = np.concatenate((g, g2[::-1, :, :]), axis=0)
-    return csi_responses, position_vector
-
 def generate_conditioned_attenuation_sample_binlabels_MIMO_test(args, model,dataset_max,dataset_mean, dataset_std, rotation_points, rotations, num_labels, nominal_positions, position, deviation, step_distance, step_distance2, generation):
     # filename2 = args.targets
     # matfile = sio.loadmat(file_name=filename2)
@@ -249,7 +204,7 @@ def generate_conditioned_attenuation_sample_binlabels_MIMO_test(args, model,data
     latent = model.latent_dim
     rotations2 = rotations[:-1]
     full_rotations = np.concatenate((rotations, rotations2[::-1]), axis=0)  # -pi/2 pi/2 support
-    att_responses = np.zeros((n, np.shape(full_rotations)[0], antennas))
+    att_responses = np.zeros((np.shape(full_rotations)[0], antennas, n))
     # labelling, choose
     # label_v = assignLabelsTargeSize_v3(height, tm, nominal_target_size)
     # label_v = assignLabelsTargeSize_v2(height, tm, step_distance2, nominal_target_size)
@@ -259,7 +214,6 @@ def generate_conditioned_attenuation_sample_binlabels_MIMO_test(args, model,data
         deviationX = np.random.rand() * (deviation * 2) - deviation # +- 0.1
         deviationY = np.random.rand() * (deviation * 2) - deviation
         position_c = [position[0] + deviationX, position[1] + deviationY]
-
         # labelling, choose
         label_onehot = assignLabelsPositions_v2(position_c, nominal_positions, num_labels, step_distance)
         # label_onehot = assignLabelsPositions_v3(position_c, nominal_positions, num_labels)
@@ -267,18 +221,16 @@ def generate_conditioned_attenuation_sample_binlabels_MIMO_test(args, model,data
         # label_onehot[:, num_positions:] = label_v
         # for q in range(num_labels - num_positions):
         #    label_onehot[:, num_positions + q] = label_v[:, q]
-
         z = tf.random.normal(shape=(1, latent), mean=0.0, stddev=1.0)
         z_lbl_concat = np.concatenate((z, label_onehot), axis=1)
-        response = model.decoder_block(z_lbl_concat)
+        preds = model.decoder_block(z_lbl_concat)
 
-        # response = preds
-        # response = tf.reshape(preds[0], [rotation_points, antennas])
+        response = tf.reshape(preds[0], [-1, rotation_points, antennas])
         response = (response * dataset_std) + dataset_mean
         response = response * dataset_max
         g = np.squeeze(response.numpy())
         g2 = g[:-1,:]
-        att_responses[gen_idx, :, :] = np.concatenate((g, g2[::-1,:]), axis=0)
+        att_responses[:, :, gen_idx] = np.concatenate((g, g2[::-1,:]), axis=0)
     return att_responses
 
 
