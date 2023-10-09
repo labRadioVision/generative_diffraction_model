@@ -1,4 +1,4 @@
-# generative_diffraction_model
+# generative_diffraction_model (single link, generation of scalar attenuations)
 
 
 real_time_generation_cvae.py: the code can be used to generate RF attenuation samples according to a diffraction model using a pre-trained C-VAE network. 
@@ -45,6 +45,8 @@ optional arguments:
   
   -pos_y POS_Y          set the target position in y domain (across the los) in m
 
+
+# generative_diffraction_model (MIMO link, generation of scalar attenuations)
 real_time_generation_cvae_MIMO.py: the code can be used to generate RF attenuation samples now considering a MIMO (multiple input multiple output transmitter-receiver setup) 
 
 Pre-trained models limitations: 9 antenna at the TX, 9 antennas at the RX (spacing half-wavelength); transmitter-receiver distance (4m) and height from ground 1m, 2.40GHz, maximum and minimum target height (2m and 1.7m), maximum and minimum target trasversal max size (0.55m) and 0.45m. 75 nominal positions used in training (see nominal_positions.mat)
